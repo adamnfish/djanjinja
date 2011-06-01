@@ -20,6 +20,8 @@ class RequestFactory(DjangoRequestFactory):
         object in Django's RequestFactory and extend it here with
         Djanjinja's Context.
         """
+        # TODO: only apply middleware if it appears in the settings
+
         # call request on parent class
         request = super(RequestFactory, self).request(*args, **kwargs)
         # mutate the request object using Djanjinja's middleware

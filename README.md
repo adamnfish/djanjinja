@@ -351,6 +351,33 @@ constructed, it behaves almost exactly the same as the usual `RequestContext`,
 only it uses the request object to which it has been attached, so you don't have
 to pass it in to the constructor every time.
 
+## Tests
+
+As of version 1.3, Django ships with a RequestFactory class. This can
+be used to create fake requests which allows you to test your views in
+isolation. Rather than having to run though the url definitions,
+Django's internals and the middleware, you can create a fake request
+object and call the view directly.
+
+Unfortunately if you are using Djanjinja's request.Context helper,
+your views will not work. This is because Django creates a fake
+request object and does not run the middleware on it - Djanjinja uses
+the middleware phase to add the Context class to the request object.
+
+To solve this, Djanjinja offers its own RequestFactory class. This is
+a thin wrapper around Django's RequestFactory that automatically
+applies Djanjinja's middleware to the request before returning it. Its
+usage is identical to Django's RequestFactory so consult Django's
+documentation for usage - the only difference is that rather than
+importing from Django, you should get the RequestFactory class from
+Djanjinja.
+
+    # instead of this:
+    from django.test.client import RequestFactory
+    
+    # do this
+    from djanjinja.test import RequestFactory
+
 ## Template Loading
 
 DjanJinja hooks directly into the Django template loader machinery to load
