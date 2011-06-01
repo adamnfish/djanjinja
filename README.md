@@ -286,7 +286,7 @@ It’s relatively simple to set Django up to do this. Simply override the handle
     handler404 = 'djanjinja.handlers.page_not_found'
     handler500 = 'djanjinja.handlers.server_error'
 
-## `RequestContext`
+## RequestContext
 
 One of Django's most useful features is the `RequestContext` class, which allows
 you to specify several context processors which each add some information to the
