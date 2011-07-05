@@ -112,14 +112,42 @@ class Environment(jinja2.Environment):
     del adder
 
 
-class TemplateLoaders(object):
+class DjanjinjaLoader(jinja2.BaseLoader):
     """
-    Calculate the template_source_loaders the first time they are
-    required and use the result thereafter.
+    Handles loading the template source. This class interfaces eith
+    Django to load the source for a given template name.
+
+    It works as a bridge between jinja2's Loader arguments and the
+    format expected by the Django template loaders.
     """
 
     template_source_loaders = None
-    
+
+    def get_source(self, environment, template):
+        """
+        Uses each template loader (as defined in settings.py) to
+        attempt to retrieve the template's source.
+        
+        The first time this method is run it fetches and internally
+        caches the template loaders defined in Django's settings.
+        """
+        if self.template_source_loaders is None:
+            # lazily fetch Django's template loaders
+            self.template_source_loaders = self.fetch_template_source_loaders()
+
+        for loader in self.template_source_loaders:
+            # look through each of the configured Django template loaders
+            try:
+                # use the Django loader to fetch the source
+                source, display_name = loader.load_template_source(template)
+                return (source, display_name, lambda: False)
+            except (jinja2.exceptions.TemplateNotFound, TemplateDoesNotExist):
+                # continue with other loaders
+                continue
+        # no loaders found the template
+        # raise Django template error
+        raise TemplateDoesNotExist(name)
+
     def fetch_template_source_loaders(self):
         """
         Reads Django's TEMPLATE_LOADERS setting and fetches each
@@ -135,49 +163,6 @@ class TemplateLoaders(object):
             if loader is not None:
                 loaders.append(loader)
         return tuple(loaders)
-
-    
-    def __call__(self, name):
-        """
-        Uses each template loader (as defined in settings.py) to
-        attempt to retrieve the template's source.
-        
-        The first time this method is run it fetches and internally
-        caches the template loaders defined in Django's settings.
-        """
-        if self.template_source_loaders is None:
-            self.template_source_loaders = self.fetch_template_source_loaders()
-
-        for loader in self.template_source_loaders:
-            try:
-                source, display_name = loader.load_template_source(name)
-                return source
-            except TemplateDoesNotExist:
-                pass
-        raise TemplateDoesNotExist(name)
-template_loaders = TemplateLoaders()
-
-
-def get_template_source(name):
-    
-    """
-    Interface with Django to load the source for a given template name.
-    
-    This function is a simple wrapper around
-    ``django.template.loader.find_template_source()`` to support the behaviour
-    expected by the ``jinja2.FunctionLoader`` loader class. It requires Django
-    to be configured (i.e. the settings need to be loaded).
-    """
-    # fetch the source using the template_source_loaders configured in
-    # Django's settings - handled by the template_loaders singleton
-    source = template_loaders(name)
-    
-    # `jinja2.FunctionLoader` expects a triple of the source of the template,
-    # the name used to load it, and a 0-ary callable which will return whether
-    # or not the template needs to be reloaded. The callable will only ever be
-    # called if auto-reload is on. In this case, we'll just assume that the
-    # template does need to be reloaded.
-    return (source, name, lambda: False)
 
 
 def bootstrap():
@@ -210,7 +195,7 @@ def bootstrap():
     global TEMPLATE_ENVIRONMENT
     
     TEMPLATE_ENVIRONMENT = Environment(
-        loader=jinja2.FunctionLoader(get_template_source),
+        loader=DjanjinjaLoader(),
         auto_reload=getattr(settings, 'DEBUG', True), autoescape=autoescape,
         bytecode_cache=bytecode_cache, extensions=extensions)
     
