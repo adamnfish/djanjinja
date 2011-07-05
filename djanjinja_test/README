@@ -1,0 +1,12 @@
+DjanJinja uses an example Django project as its tests. There are tests
+for both Django v1.2 and Django v1.3 to make sure it works for both.
+
+The `setup.sh` file will set the test environment, installing
+dependencies where necessary. This is the recommended way of running
+the tests but there is no reqson you have to use it. It will create a
+separate virtual environment for each version of the project to
+isolate the tests from each other and from your system.
+
+Running the tests is as simple as running the tests suites for both
+projects but there is a helper shell script included to wrap this
+behaviour.
